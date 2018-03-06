@@ -19,13 +19,84 @@
 
 /* OpenImageIO is used for all image file reading and writing. */
 
-#include <OpenImageIO/imageio.h>
-
 #include "util/util_vector.h"
+
+#ifndef WITHOUT_OPENIMAGEIO
+#include <OpenImageIO/imageio.h>
+namespace IMG = OIIO;
+#else
+
+/* Dummy OpenImageIO implementation, just so that the compilation works. */
+namespace IMG {
+
+	struct TypeDesc {
+		enum BASETYPE { UNKNOWN, UINT8, HALF, FLOAT };
+		constexpr TypeDesc (BASETYPE btype=UNKNOWN) {}
+		size_t basesize () const { return 0; }
+		bool operator== (BASETYPE b) {return false;}
+	};
+
+	struct ImageSpec {
+		int width;
+		int height;
+		int depth;
+		int nchannels;
+		TypeDesc format;
+		std::vector<TypeDesc> channelformats;
+		ImageSpec() {};
+		ImageSpec(int xres, int yres, int nchans,
+				  TypeDesc fmt = TypeDesc::UINT8) {}
+		std::string get_string_attribute(std::string name) const {
+			return std::string();
+		}
+		void attribute(std::string name, unsigned int value) {}
+	};
+
+	typedef ptrdiff_t stride_t;
+	const stride_t AutoStride = std::numeric_limits<stride_t>::min();
+
+	struct ImageInput {
+		const char *format_name (void) const { return NULL; }
+		static ImageInput *create (const std::string &filename) {
+			return NULL;
+		}
+		bool open (const std::string &name, ImageSpec &newspec,
+				   const ImageSpec &conf = ImageSpec()) {
+			return false;
+		}
+		bool read_image (TypeDesc format, void *data,
+						 stride_t xstride=AutoStride,
+						 stride_t ystride=AutoStride,
+						 stride_t zstride=AutoStride) {
+			return false;
+		}
+		bool close () { return false; }
+	};
+
+
+	struct ImageOutput {
+		static ImageOutput *create (const std::string &filename) {
+			return NULL;
+		}
+		bool open (const std::string &name, const ImageSpec &newspec) {
+			return false;
+		}
+		bool write_image (TypeDesc format, const void *data,
+						  stride_t xstride=AutoStride,
+						  stride_t ystride=AutoStride,
+						  stride_t zstride=AutoStride) {
+			return false;
+		}
+		bool close () { return false; }
+	};
+};
+
+
+#endif
 
 CCL_NAMESPACE_BEGIN
 
-OIIO_NAMESPACE_USING
+using namespace IMG;
 
 template<typename T>
 void util_image_resize_pixels(const vector<T>& input_pixels,

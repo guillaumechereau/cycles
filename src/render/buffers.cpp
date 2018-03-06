@@ -27,8 +27,6 @@
 #include "util/util_time.h"
 #include "util/util_types.h"
 
-#include <OpenImageIO/typedesc.h>
-
 CCL_NAMESPACE_BEGIN
 
 /* Buffer Params */
@@ -466,12 +464,12 @@ void DisplayBuffer::write(const string& filename)
 
 	/* write image */
 	ImageOutput *out = ImageOutput::create(filename);
-	ImageSpec spec(w, h, 4, OIIO::TypeDesc::UINT8);
+	ImageSpec spec(w, h, 4, IMG::TypeDesc::UINT8);
 
 	out->open(filename, spec);
 
 	/* conversion for different top/bottom convention */
-	out->write_image(OIIO::TypeDesc::UINT8,
+	out->write_image(IMG::TypeDesc::UINT8,
 		(uchar*)(pixels + (h-1)*w),
 		AutoStride,
 		-w*sizeof(uchar4),
