@@ -141,7 +141,7 @@ private:
 	                             int &depth,
 	                             int &components);
 
-	template<TypeDesc::BASETYPE FileFormat,
+	template<OIIO::TypeDesc::BASETYPE FileFormat,
 	         typename StorageType,
 	         typename DeviceType>
 	bool file_load_image(Image *img,

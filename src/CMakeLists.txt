@@ -130,6 +130,10 @@ if(WITH_CYCLES_OSL)
 	endif()
 endif()
 
+if(NOT WITH_OPENIMAGEIO)
+	add_definitions(-DWITHOUT_OPENIMAGEIO)
+endif()
+
 # Definitions and Includes
 
 add_definitions(

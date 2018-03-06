@@ -150,7 +150,7 @@ bool ImageManager::get_image_metadata(const string& filename,
 	}
 
 	/* check if it's half float */
-	if(spec.format == TypeDesc::HALF)
+	if(spec.format == OIIO::TypeDesc::HALF)
 		metadata.is_half = true;
 
 	/* basic color space detection, not great but better than nothing
@@ -473,7 +473,7 @@ bool ImageManager::file_load_image_generic(Image *img,
 	return true;
 }
 
-template<TypeDesc::BASETYPE FileFormat,
+template<OIIO::TypeDesc::BASETYPE FileFormat,
          typename StorageType,
          typename DeviceType>
 bool ImageManager::file_load_image(Image *img,
@@ -481,7 +481,7 @@ bool ImageManager::file_load_image(Image *img,
                                    int texture_limit,
                                    device_vector<DeviceType>& tex_img)
 {
-	const StorageType alpha_one = (FileFormat == TypeDesc::UINT8)? 255 : 1;
+	const StorageType alpha_one = (FileFormat == OIIO::TypeDesc::UINT8)? 255 : 1;
 	ImageInput *in = NULL;
 	int width, height, depth, components;
 	if(!file_load_image_generic(img, &in, width, height, depth, components)) {
@@ -542,14 +542,14 @@ bool ImageManager::file_load_image(Image *img,
 		delete in;
 	}
 	else {
-		if(FileFormat == TypeDesc::FLOAT) {
+		if(FileFormat == OIIO::TypeDesc::FLOAT) {
 			builtin_image_float_pixels_cb(img->filename,
 			                              img->builtin_data,
 			                              (float*)&pixels[0],
 			                              num_pixels * components,
 			                              img->builtin_free_cache);
 		}
-		else if(FileFormat == TypeDesc::UINT8) {
+		else if(FileFormat == OIIO::TypeDesc::UINT8) {
 			builtin_image_pixels_cb(img->filename,
 			                        img->builtin_data,
 			                        (uchar*)&pixels[0],
@@ -610,7 +610,7 @@ bool ImageManager::file_load_image(Image *img,
 		}
 	}
 	/* Make sure we don't have buggy values. */
-	if(FileFormat == TypeDesc::FLOAT) {
+	if(FileFormat == OIIO::TypeDesc::FLOAT) {
 		/* For RGBA buffers we put all channels to 0 if either of them is not
 		 * finite. This way we avoid possible artifacts caused by fully changed
 		 * hue.
@@ -707,10 +707,10 @@ void ImageManager::device_load_image(Device *device,
 		device_vector<float4> *tex_img
 			= new device_vector<float4>(device, img->mem_name.c_str(), MEM_TEXTURE);
 
-		if(!file_load_image<TypeDesc::FLOAT, float>(img,
-		                                            type,
-		                                            texture_limit,
-		                                            *tex_img))
+		if(!file_load_image<OIIO::TypeDesc::FLOAT, float>(img,
+		                                                  type,
+		                                                  texture_limit,
+		                                                  *tex_img))
 		{
 			/* on failure to load, we set a 1x1 pixels pink image */
 			thread_scoped_lock device_lock(device_mutex);
@@ -733,10 +733,10 @@ void ImageManager::device_load_image(Device *device,
 		device_vector<float> *tex_img
 			= new device_vector<float>(device, img->mem_name.c_str(), MEM_TEXTURE);
 
-		if(!file_load_image<TypeDesc::FLOAT, float>(img,
-		                                            type,
-		                                            texture_limit,
-		                                            *tex_img))
+		if(!file_load_image<OIIO::TypeDesc::FLOAT, float>(img,
+		                                                  type,
+		                                                  texture_limit,
+		                                                  *tex_img))
 		{
 			/* on failure to load, we set a 1x1 pixels pink image */
 			thread_scoped_lock device_lock(device_mutex);
@@ -756,10 +756,10 @@ void ImageManager::device_load_image(Device *device,
 		device_vector<uchar4> *tex_img
 			= new device_vector<uchar4>(device, img->mem_name.c_str(), MEM_TEXTURE);
 
-		if(!file_load_image<TypeDesc::UINT8, uchar>(img,
-		                                            type,
-		                                            texture_limit,
-		                                            *tex_img))
+		if(!file_load_image<OIIO::TypeDesc::UINT8, uchar>(img,
+		                                                  type,
+		                                                  texture_limit,
+		                                                  *tex_img))
 		{
 			/* on failure to load, we set a 1x1 pixels pink image */
 			thread_scoped_lock device_lock(device_mutex);
@@ -782,10 +782,10 @@ void ImageManager::device_load_image(Device *device,
 		device_vector<uchar> *tex_img
 			= new device_vector<uchar>(device, img->mem_name.c_str(), MEM_TEXTURE);
 
-		if(!file_load_image<TypeDesc::UINT8, uchar>(img,
-		                                            type,
-		                                            texture_limit,
-		                                            *tex_img)) {
+		if(!file_load_image<OIIO::TypeDesc::UINT8, uchar>(img,
+		                                                  type,
+		                                                  texture_limit,
+		                                                  *tex_img)) {
 			/* on failure to load, we set a 1x1 pixels pink image */
 			thread_scoped_lock device_lock(device_mutex);
 			uchar *pixels = (uchar*)tex_img->alloc(1, 1);
@@ -804,10 +804,10 @@ void ImageManager::device_load_image(Device *device,
 		device_vector<half4> *tex_img
 			= new device_vector<half4>(device, img->mem_name.c_str(), MEM_TEXTURE);
 
-		if(!file_load_image<TypeDesc::HALF, half>(img,
-		                                          type,
-		                                          texture_limit,
-		                                          *tex_img)) {
+		if(!file_load_image<OIIO::TypeDesc::HALF, half>(img,
+		                                                type,
+		                                                texture_limit,
+		                                                *tex_img)) {
 			/* on failure to load, we set a 1x1 pixels pink image */
 			thread_scoped_lock device_lock(device_mutex);
 			half *pixels = (half*)tex_img->alloc(1, 1);
@@ -829,10 +829,10 @@ void ImageManager::device_load_image(Device *device,
 		device_vector<half> *tex_img
 			= new device_vector<half>(device, img->mem_name.c_str(), MEM_TEXTURE);
 
-		if(!file_load_image<TypeDesc::HALF, half>(img,
-		                                          type,
-		                                          texture_limit,
-		                                          *tex_img)) {
+		if(!file_load_image<OIIO::TypeDesc::HALF, half>(img,
+		                                                type,
+		                                                texture_limit,
+		                                                *tex_img)) {
 			/* on failure to load, we set a 1x1 pixels pink image */
 			thread_scoped_lock device_lock(device_mutex);
 			half *pixels = (half*)tex_img->alloc(1, 1);
