@@ -319,7 +319,7 @@ void Node::set_default_value(const SocketType& socket)
 {
 	const void *src = socket.default_value;
 	void *dst = ((char*)this) + socket.struct_offset;
-	memcpy(dst, src, socket.size());
+	if (src) memcpy(dst, src, socket.size());
 }
 
 template<typename T>
