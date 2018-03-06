@@ -18,12 +18,6 @@
 #include "util/util_path.h"
 #include "util/util_string.h"
 
-#include <OpenImageIO/filesystem.h>
-#include <OpenImageIO/strutil.h>
-#include <OpenImageIO/sysutil.h>
-
-OIIO_NAMESPACE_USING
-
 #include <stdio.h>
 
 #include <sys/stat.h>
@@ -48,6 +42,48 @@ OIIO_NAMESPACE_USING
 #include "util/util_windows.h"
 
 CCL_NAMESPACE_BEGIN
+
+// Copied from OpenImageIO.
+static string this_program_path()
+{
+	char filename[10240];
+	filename[0] = 0;
+
+#if defined(__linux__)
+	unsigned int size = sizeof(filename);
+	int r = readlink ("/proc/self/exe", filename, size);
+	assert(r < int(size)); // user won't get the right answer if the filename is too long to store
+	if (r > 0) filename[r] = 0; // readlink does not fill in the 0 byte
+#elif defined(__APPLE__)
+	// For info:  'man 3 dyld'
+	unsigned int size = sizeof(filename);
+	int r = _NSGetExecutablePath (filename, &size);
+	if (r == 0)
+		r = size;
+#elif defined(_WIN32)
+	// According to MSDN...
+	unsigned int size = sizeof(filename);
+	int r = GetModuleFileName (NULL, filename, size);
+#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+	int mib[4];
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_PATHNAME;
+	mib[3] = -1;
+	size_t cb = sizeof(filename);
+	int r=1;
+	sysctl(mib, 4, filename, &cb, NULL, 0);
+#elif defined(__GNU__) || defined(__OpenBSD__)
+	int r = 0;
+#else
+	// No idea what platform this is
+	static_assert(0, "this_program_path() unimplemented on this platform");
+#endif
+
+	if (r > 0)
+		return std::string (filename);
+	return std::string();   // Couldn't figure it out
+}
 
 #ifdef _WIN32
 #  if defined(_MSC_VER) || defined(__MINGW64__)
@@ -373,7 +409,7 @@ string path_get(const string& sub)
 		return special;
 
 	if(cached_path == "")
-		cached_path = path_dirname(Sysutil::this_program_path());
+		cached_path = path_dirname(this_program_path());
 
 	return path_join(cached_path, sub);
 }
@@ -381,7 +417,7 @@ string path_get(const string& sub)
 string path_user_get(const string& sub)
 {
 	if(cached_user_path == "")
-		cached_user_path = path_dirname(Sysutil::this_program_path());
+		cached_user_path = path_dirname(this_program_path());
 
 	return path_join(cached_user_path, sub);
 }
