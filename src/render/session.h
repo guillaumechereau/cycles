@@ -142,6 +142,9 @@ public:
 
 	function<void(RenderTile&)> write_render_tile_cb;
 	function<void(RenderTile&, bool)> update_render_tile_cb;
+	function<bool(const unsigned char *pixels,
+	              int width, int height, int depth,
+	              const string &filename)> write_image_cb;
 
 	explicit Session(const SessionParams& params);
 	~Session();

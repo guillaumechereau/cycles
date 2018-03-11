@@ -53,6 +53,24 @@ struct Options {
 	bool show_help, interactive, pause;
 } options;
 
+static bool write_image_cb(const unsigned char *pixels,
+                           int w, int h, int depth,
+                           const string &filename)
+{
+	ImageOutput *out = ImageOutput::create(filename);
+	ImageSpec spec(w, h, depth, TypeDesc::UINT8);
+	out->open(filename, spec);
+	/* conversion for different top/bottom convention */
+	out->write_image(TypeDesc::UINT8,
+		pixels + (h - 1) * w * depth,
+		AutoStride,
+		-w * depth,
+		AutoStride);
+	out->close();
+	delete out;
+	return true;
+}
+
 static void session_print(const string& str)
 {
 	/* print with carriage return to overwrite previous */
@@ -128,6 +146,7 @@ static void session_init()
 	else
 		options.session->progress.set_update_callback(function_bind(&view_redraw));
 #endif
+	options.session->write_image_cb = write_image_cb;
 
 	/* load scene */
 	scene_init();

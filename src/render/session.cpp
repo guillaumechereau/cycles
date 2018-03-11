@@ -101,7 +101,7 @@ Session::~Session()
 		wait();
 	}
 
-	if(!params.output_path.empty()) {
+	if(!params.output_path.empty() && !display->half_float) {
 		/* tonemap and write out image if requested */
 		delete display;
 
@@ -110,7 +110,11 @@ Session::~Session()
 		tonemap(params.samples);
 
 		progress.set_status("Writing Image", params.output_path);
-		display->write(params.output_path);
+		assert(write_image_cb);
+		int w = display->draw_width;
+		int h = display->draw_height;
+		uchar4 *pixels = display->rgba_byte.copy_from_device(0, w, h);
+		write_image_cb((unsigned char*)pixels, w, h, 4, params.output_path);
 	}
 
 	/* clean up */
