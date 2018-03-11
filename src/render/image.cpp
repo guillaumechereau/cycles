@@ -15,7 +15,6 @@
  */
 
 #include "device/device.h"
-#include "render/image.h"
 #include "render/scene.h"
 
 #include "util/util_foreach.h"
@@ -108,85 +107,7 @@ bool ImageManager::get_image_metadata(const string& filename,
 
 		return true;
 	}
-
-	/* Perform preliminary checks, with meaningful logging. */
-	if(!path_exists(filename)) {
-		VLOG(1) << "File '" << filename << "' does not exist.";
-		return false;
-	}
-	if(path_is_directory(filename)) {
-		VLOG(1) << "File '" << filename << "' is a directory, can't use as image.";
-		return false;
-	}
-
-	ImageInput *in = ImageInput::create(filename);
-
-	if(!in) {
-		return false;
-	}
-
-	ImageSpec spec;
-	if(!in->open(filename, spec)) {
-		delete in;
-		return false;
-	}
-
-	metadata.width = spec.width;
-	metadata.height = spec.height;
-	metadata.depth = spec.depth;
-
-	/* check the main format, and channel formats;
-	 * if any take up more than one byte, we'll need a float texture slot */
-	if(spec.format.basesize() > 1) {
-		metadata.is_float = true;
-		metadata.is_linear = true;
-	}
-
-	for(size_t channel = 0; channel < spec.channelformats.size(); channel++) {
-		if(spec.channelformats[channel].basesize() > 1) {
-			metadata.is_float = true;
-			metadata.is_linear = true;
-		}
-	}
-
-	/* check if it's half float */
-	if(spec.format == TypeDesc::HALF)
-		metadata.is_half = true;
-
-	/* basic color space detection, not great but better than nothing
-	 * before we do OpenColorIO integration */
-	if(metadata.is_float) {
-		string colorspace = spec.get_string_attribute("oiio:ColorSpace");
-
-		metadata.is_linear = !(colorspace == "sRGB" ||
-							   colorspace == "GammaCorrected" ||
-							   (colorspace == "" &&
-								   (strcmp(in->format_name(), "png") == 0 ||
-									strcmp(in->format_name(), "tiff") == 0 ||
-									strcmp(in->format_name(), "dpx") == 0 ||
-									strcmp(in->format_name(), "jpeg2000") == 0)));
-	}
-	else {
-		metadata.is_linear = false;
-	}
-
-	/* set type and channels */
-	metadata.channels = spec.nchannels;
-
-	if(metadata.is_half) {
-		metadata.type = (metadata.channels > 1) ? IMAGE_DATA_TYPE_HALF4 : IMAGE_DATA_TYPE_HALF;
-	}
-	else if(metadata.is_float) {
-		metadata.type = (metadata.channels > 1) ? IMAGE_DATA_TYPE_FLOAT4 : IMAGE_DATA_TYPE_FLOAT;
-	}
-	else {
-		metadata.type = (metadata.channels > 1) ? IMAGE_DATA_TYPE_BYTE4 : IMAGE_DATA_TYPE_BYTE;
-	}
-
-	in->close();
-	delete in;
-
-	return true;
+	return false;
 }
 
 int ImageManager::max_flattened_slot(ImageDataType type)
@@ -407,7 +328,6 @@ void ImageManager::tag_reload_image(const string& filename,
 }
 
 bool ImageManager::file_load_image_generic(Image *img,
-                                           ImageInput **in,
                                            int &width,
                                            int &height,
                                            int &depth,
@@ -417,33 +337,8 @@ bool ImageManager::file_load_image_generic(Image *img,
 		return false;
 
 	if(!img->builtin_data) {
-		/* NOTE: Error logging is done in meta data acquisition. */
-		if(!path_exists(img->filename) || path_is_directory(img->filename)) {
-			return false;
-		}
-
-		/* load image from file through OIIO */
-		*in = ImageInput::create(img->filename);
-
-		if(!*in)
-			return false;
-
-		ImageSpec spec = ImageSpec();
-		ImageSpec config = ImageSpec();
-
-		if(img->use_alpha == false)
-			config.attribute("oiio:UnassociatedAlpha", 1);
-
-		if(!(*in)->open(img->filename, spec, config)) {
-			delete *in;
-			*in = NULL;
-			return false;
-		}
-
-		width = spec.width;
-		height = spec.height;
-		depth = spec.depth;
-		components = spec.nchannels;
+		// Only support loading using the callback functions.
+		return false;
 	}
 	else {
 		/* load image using builtin images callbacks */
@@ -461,12 +356,6 @@ bool ImageManager::file_load_image_generic(Image *img,
 
 	/* we only handle certain number of components */
 	if(!(components >= 1 && components <= 4)) {
-		if(*in) {
-			(*in)->close();
-			delete *in;
-			*in = NULL;
-		}
-
 		return false;
 	}
 
@@ -482,9 +371,8 @@ bool ImageManager::file_load_image(Image *img,
                                    device_vector<DeviceType>& tex_img)
 {
 	const StorageType alpha_one = (FileFormat == TypeDesc::UINT8)? 255 : 1;
-	ImageInput *in = NULL;
 	int width, height, depth, components;
-	if(!file_load_image_generic(img, &in, width, height, depth, components)) {
+	if(!file_load_image_generic(img, width, height, depth, components)) {
 		return false;
 	}
 	/* Read RGBA pixels. */
@@ -509,56 +397,22 @@ bool ImageManager::file_load_image(Image *img,
 	}
 	bool cmyk = false;
 	const size_t num_pixels = ((size_t)width) * height * depth;
-	if(in) {
-		StorageType *readpixels = pixels;
-		vector<StorageType> tmppixels;
-		if(components > 4) {
-			tmppixels.resize(((size_t)width)*height*components);
-			readpixels = &tmppixels[0];
-		}
-		if(depth <= 1) {
-			size_t scanlinesize = ((size_t)width)*components*sizeof(StorageType);
-			in->read_image(FileFormat,
-			               (uchar*)readpixels + (height-1)*scanlinesize,
-			               AutoStride,
-			               -scanlinesize,
-			               AutoStride);
-		}
-		else {
-			in->read_image(FileFormat, (uchar*)readpixels);
-		}
-		if(components > 4) {
-			size_t dimensions = ((size_t)width)*height;
-			for(size_t i = dimensions-1, pixel = 0; pixel < dimensions; pixel++, i--) {
-				pixels[i*4+3] = tmppixels[i*components+3];
-				pixels[i*4+2] = tmppixels[i*components+2];
-				pixels[i*4+1] = tmppixels[i*components+1];
-				pixels[i*4+0] = tmppixels[i*components+0];
-			}
-			tmppixels.clear();
-		}
-		cmyk = strcmp(in->format_name(), "jpeg") == 0 && components == 4;
-		in->close();
-		delete in;
+	if(FileFormat == TypeDesc::FLOAT) {
+		builtin_image_float_pixels_cb(img->filename,
+		                              img->builtin_data,
+		                              (float*)&pixels[0],
+		                              num_pixels * components,
+		                              img->builtin_free_cache);
+	}
+	else if(FileFormat == TypeDesc::UINT8) {
+		builtin_image_pixels_cb(img->filename,
+		                        img->builtin_data,
+		                        (uchar*)&pixels[0],
+		                        num_pixels * components,
+		                        img->builtin_free_cache);
 	}
 	else {
-		if(FileFormat == TypeDesc::FLOAT) {
-			builtin_image_float_pixels_cb(img->filename,
-			                              img->builtin_data,
-			                              (float*)&pixels[0],
-			                              num_pixels * components,
-			                              img->builtin_free_cache);
-		}
-		else if(FileFormat == TypeDesc::UINT8) {
-			builtin_image_pixels_cb(img->filename,
-			                        img->builtin_data,
-			                        (uchar*)&pixels[0],
-			                        num_pixels * components,
-			                        img->builtin_free_cache);
-		}
-		else {
-			/* TODO(dingto): Support half for ImBuf. */
-		}
+		/* TODO(dingto): Support half for ImBuf. */
 	}
 	/* Check if we actually have a float4 slot, in case components == 1,
 	 * but device doesn't support single channel textures.

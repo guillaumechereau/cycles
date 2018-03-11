@@ -17,15 +17,9 @@
 #ifndef __UTIL_IMAGE_H__
 #define __UTIL_IMAGE_H__
 
-/* OpenImageIO is used for all image file reading and writing. */
-
-#include <OpenImageIO/imageio.h>
-
 #include "util/util_vector.h"
 
 CCL_NAMESPACE_BEGIN
-
-OIIO_NAMESPACE_USING
 
 template<typename T>
 void util_image_resize_pixels(const vector<T>& input_pixels,

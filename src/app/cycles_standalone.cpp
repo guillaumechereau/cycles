@@ -34,12 +34,15 @@
 #include "util/util_transform.h"
 #include "util/util_version.h"
 
+#include <OpenImageIO/imageio.h>
+
 #ifdef WITH_CYCLES_STANDALONE_GUI
 #include "util/util_view.h"
 #endif
 
 #include "app/cycles_xml.h"
 
+OIIO_NAMESPACE_USING
 CCL_NAMESPACE_BEGIN
 
 struct Options {
