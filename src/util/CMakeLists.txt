@@ -15,6 +15,7 @@ set(SRC
 	util_math_cdf.cpp
 	util_md5.cpp
 	util_path.cpp
+	util_param.cpp
 	util_string.cpp
 	util_simd.cpp
 	util_system.cpp

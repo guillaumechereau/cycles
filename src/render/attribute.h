@@ -22,6 +22,7 @@
 #include "util/util_list.h"
 #include "util/util_param.h"
 #include "util/util_types.h"
+#include "util/util_ustring.h"
 #include "util/util_vector.h"
 
 CCL_NAMESPACE_BEGIN

@@ -42,7 +42,6 @@
 
 #include "app/cycles_xml.h"
 
-OIIO_NAMESPACE_USING
 CCL_NAMESPACE_BEGIN
 
 struct Options {
@@ -60,15 +59,15 @@ static bool write_image_cb(const unsigned char *pixels,
                            int w, int h, int depth,
                            const string &filename)
 {
-	ImageOutput *out = ImageOutput::create(filename);
-	ImageSpec spec(w, h, depth, TypeDesc::UINT8);
+	OIIO::ImageOutput *out = OIIO::ImageOutput::create(filename);
+	OIIO::ImageSpec spec(w, h, depth, OIIO::TypeDesc::UINT8);
 	out->open(filename, spec);
 	/* conversion for different top/bottom convention */
-	out->write_image(TypeDesc::UINT8,
+	out->write_image(OIIO::TypeDesc::UINT8,
 		pixels + (h - 1) * w * depth,
-		AutoStride,
+		OIIO::AutoStride,
 		-w * depth,
-		AutoStride);
+		OIIO::AutoStride);
 	out->close();
 	delete out;
 	return true;

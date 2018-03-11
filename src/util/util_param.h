@@ -17,18 +17,34 @@
 #ifndef __UTIL_PARAM_H__
 #define __UTIL_PARAM_H__
 
-/* Parameter value lists from OpenImageIO are used to store custom properties
- * on various data, which can then later be used in shaders. */
-
-#include <OpenImageIO/paramlist.h>
-#include <OpenImageIO/typedesc.h>
-#include <OpenImageIO/ustring.h>
+#include <string>
 
 CCL_NAMESPACE_BEGIN
 
-OIIO_NAMESPACE_USING
+class ParamValue {
+	public:
+};
+
+class TypeDesc : public std::string {
+public:
+	enum BASETYPE { UNKNOWN, NONE,
+					UCHAR, UINT8=UCHAR, CHAR, INT8=CHAR,
+					USHORT, UINT16=USHORT, SHORT, INT16=SHORT,
+					UINT, UINT32=UINT, INT, INT32=INT,
+					ULONGLONG, UINT64=ULONGLONG, LONGLONG, INT64=LONGLONG,
+					HALF, FLOAT, DOUBLE, STRING, PTR, LASTBASE };
+
+	TypeDesc() {}
+	TypeDesc(std::string name) : std::string(name) { }
+
+	static const TypeDesc TypeColor;
+	static const TypeDesc TypeFloat;
+	static const TypeDesc TypePoint;
+	static const TypeDesc TypeNormal;
+	static const TypeDesc TypeVector;
+	static const TypeDesc TypeMatrix;
+};
 
 CCL_NAMESPACE_END
 
 #endif /* __UTIL_PARAM_H__ */
-
